@@ -4,9 +4,8 @@ import functools
 import urllib.request
 import shutil
 import os
-import time
 from pathlib import Path
-from typing import List
+from typing import List, Match
 
 def force_delete(path: str):
     try:
@@ -38,17 +37,16 @@ def newer(v1: str, v2: str) -> int:
 
 def find_latest_ver() -> str:
     git_ls_remote: List[str] = subprocess.check_output(["git", "ls-remote", "--tags", "--ref"], text=True, cwd="./git", stderr=subprocess.DEVNULL).split('\n')[:-1]
-    avail_vers_all = map(lambda s: re.match(r"[0-9a-f]*\trefs/tags/v(.*)", s).group(1), git_ls_remote)
     avail_vers: List[str] = []
 
-    for v in avail_vers_all:
-        # exclude non "complete" versions (e.g., 5.10-rc1, 5.10.0-tree)
-        if v.find("-") == -1:
-            avail_vers.append(v)
+    for s in git_ls_remote:
+        m = re.match(r"[0-9a-f]*\trefs/tags/v(.*)", s)
+        if m is not None: # re.match returns None if there is no match
+            v = m.group(1)
+            if v.find("-") == -1: # exclude non "complete" versions (e.g., 5.10-rc1, 5.10.0-tree)
+                avail_vers.append(v)
 
-    avail_vers = sorted(avail_vers, key=functools.cmp_to_key(newer))
-
-    return avail_vers[-1]
+    return sorted(avail_vers, key=functools.cmp_to_key(newer))[-1]
 
 def get_built_ver() -> str:
     with open("./built_version", "r") as f:
@@ -73,8 +71,8 @@ def do_build(v: str):
         print(filename, "already exists.")
     except FileNotFoundError:
         with urllib.request.urlopen(url) as response:
-            with open(filename, "wb") as f:
-                shutil.copyfileobj(response, f)
+            with open(filename, "wb") as f_archive:
+                shutil.copyfileobj(response, f_archive)
 
     print("Extracing the archive")
     try:
@@ -86,9 +84,9 @@ def do_build(v: str):
     # cp config $dirname/.config
     # yes "" | make oldconfig
     shutil.copyfile("config", dirname + "/.config")
-    yes = subprocess.Popen(["yes", ""], stdout=subprocess.PIPE)
+    yes: subprocess.Popen[str] = subprocess.Popen(["yes", ""], stdout=subprocess.PIPE, text=True)
     subprocess.run(["make", "oldconfig"], stdin=yes.stdout, stdout=subprocess.DEVNULL, cwd=dirname, text=True)
-    
+
     print("Executing make...")
     output: str = subprocess.check_output(["make", "bindeb-pkg", "-j", str(n_jobs)], stderr=subprocess.STDOUT, cwd=dirname, text=True)
     with open("run_build.log", "w") as f:
