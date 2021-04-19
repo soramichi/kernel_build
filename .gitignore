@@ -1,0 +1,8 @@
+built_version
+config
+*.deb
+*.log
+*.buildinfo
+*.changes
+git
+*~
