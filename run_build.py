@@ -35,7 +35,15 @@ def newer(v1: str, v2: str) -> int:
     else:
         return -1
 
-def find_latest_ver() -> str:
+def get_lock_ver() -> str:
+    try:
+        with open("./lockfile", "r") as f:
+            return f.readline().split("\n")[0] # remove tailing '\n'
+    except FileNotFoundError:
+        # if the lockfile does not exit, returns an empty string
+        return ""
+
+def find_latest_ver(lock_ver: str) -> str:
     git_ls_remote: List[str] = subprocess.check_output(["git", "ls-remote", "--tags", "--ref"], text=True, cwd="./git", stderr=subprocess.DEVNULL).split('\n')[:-1]
     avail_vers: List[str] = []
 
@@ -43,7 +51,9 @@ def find_latest_ver() -> str:
         m = re.match(r"[0-9a-f]*\trefs/tags/v(.*)", s)
         if m is not None: # re.match returns None if there is no match
             v = m.group(1)
-            if v.find("-") == -1: # exclude non "complete" versions (e.g., 5.10-rc1, 5.10.0-tree)
+            # exclude non "complete" versions (e.g., 5.10-rc1, 5.10.0-tree) and
+            # verions do not match lock_ver
+            if v.find("-") == -1 and v.startswith(lock_ver):
                 avail_vers.append(v)
 
     return sorted(avail_vers, key=functools.cmp_to_key(newer))[-1]
@@ -103,7 +113,8 @@ def do_build(v: str):
         print("An error occured while buidling. Please check out the log.")
 
 if __name__ == "__main__":
-    latest_ver: str = find_latest_ver()
+    lock_ver: str = get_lock_ver()
+    latest_ver: str = find_latest_ver(lock_ver)
     built_ver: str = get_built_ver()
 
     if newer(latest_ver, built_ver) > 0:
