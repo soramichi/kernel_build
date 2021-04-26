@@ -4,7 +4,9 @@ import functools
 import urllib.request
 import shutil
 import os
+import smtplib
 from pathlib import Path
+from email.message import EmailMessage
 from typing import List, Match
 
 def force_delete(path: str):
@@ -112,6 +114,29 @@ def do_build(v: str):
     else:
         print("An error occured while buidling. Please check out the log.")
 
+def notify(ver: str):
+    try:
+        with open("mail_config") as f:
+            to_addr: str = f.readline().split("\n")[0]
+            from_addr: str = f.readline().split("\n")[0]
+            server_addr: str = f.readline().split("\n")[0]
+            user: str = f.readline().split("\n")[0]
+            pswd: str = f.readline().split("\n")[0]
+            port: int = int(f.readline().split("\n")[0])
+    except FileNotFoundError:
+        # do nothing if mail_config does not exit
+        return
+
+    msg = EmailMessage()
+    msg['Subject'] = ('New kernel was successfully built: ' + ver)
+    msg['From'] = from_addr
+    msg['To'] = to_addr
+
+    s = smtplib.SMTP(server_addr, port)
+    s.starttls()
+    s.login(user, pswd)
+    s.send_message(msg)
+
 if __name__ == "__main__":
     lock_ver: str = get_lock_ver()
     latest_ver: str = find_latest_ver(lock_ver)
@@ -120,5 +145,6 @@ if __name__ == "__main__":
     if newer(latest_ver, built_ver) > 0:
         print("A new version available:", latest_ver)
         do_build(latest_ver)
+        notify(latest_ver)
     else:
         print("No new version is available.")
