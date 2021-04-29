@@ -1,6 +1,5 @@
-built_version
 config
-mail_config
+setting.json
 *.deb
 *.log
 *.buildinfo
