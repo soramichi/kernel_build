@@ -95,8 +95,8 @@ def do_build(v: str) -> bool:
 
     if output.find("error:") == -1 and output.find("Error:") == -1:
         shutil.copyfile(dirname + "/.config", "config")   # copy the latest config back
-        # force_delete(filename)
-        # force_delete(dirname)
+        force_delete(filename)
+        force_delete(dirname)
         return True
     else:
         return False
