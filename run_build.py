@@ -38,6 +38,17 @@ def newer(v1: str, v2: str) -> int:
     else:
         return -1
 
+def find_built_ver() -> str:
+    with open("config", "r") as f:
+        lines: List[str] = f.readlines()
+
+        for l in lines:
+            m = re.match(r"# Linux/x86 ([0-9\.]+) Kernel Configuration", l)
+            if m is not None:
+                return m.group(1)
+
+        raise(ValueError("The version info cannot be extracted from the `config' file"))
+
 def find_latest_ver(lock_ver: str) -> str:
     git_ls_remote: List[str] = subprocess.check_output(["git", "ls-remote", "--tags", "--ref"], text=True, cwd="./git", stderr=subprocess.DEVNULL).split('\n')[:-1]
     avail_vers: List[str] = []
@@ -120,7 +131,7 @@ if __name__ == "__main__":
     if "lock_ver" in setting:
         lock_ver = setting["lock_ver"]
     latest_ver: str = find_latest_ver(lock_ver)
-    built_ver: str = setting["built_ver"]
+    built_ver: str = find_built_ver()
     
     if newer(latest_ver, built_ver) > 0:
         print("A new version available:", latest_ver)
@@ -128,13 +139,10 @@ if __name__ == "__main__":
         ret: bool = do_build(latest_ver)
         if ret:
             print("Build success!")
-            setting["built_ver"] = latest_ver
-            with open("setting.json", "w") as f: # remember v as the latest built version
-                f.write(json.dumps(setting, indent=4))
         else:
             print("An error occured while buidling. Please check out the log.")            
 
         if "mail_config" in setting:
             notify(latest_ver, setting["mail_config"])
     else:
-        print("No new version is available.")
+        print("No new version is available (built: {}, latest: {}).".format(built_ver, latest_ver))
