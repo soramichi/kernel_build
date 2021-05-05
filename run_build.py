@@ -59,7 +59,7 @@ def find_latest_ver(lock_ver: str) -> str:
         if m is not None: # re.match returns None if there is no match
             v = m.group(1)
             # exclude non "complete" versions (e.g., 5.10-rc1, 5.10.0-tree) and
-            # verions do not match lock_ver
+            # versions that do not start with `lock_ver'
             if v.find("-") == -1 and v.startswith(lock_ver):
                 avail_vers.append(v)
 
