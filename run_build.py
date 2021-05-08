@@ -32,7 +32,7 @@ def newer(v1: str, v2: str) -> int:
     if len(v1) == len(v2):
         return 0
     # if v1 is the same as v2 up to len(v2) and still has something, probably v1 is newer
-    # Example: v1 = "5.4.10.1" vs. v2 = "5.4.10"
+    # Example: v1 = "5.12" vs. v2 = "5.12.1" (this actually happens; I hope they don't omit ".0" !)
     elif len(v1) > len(v2):
         return 1
     # the other way around
