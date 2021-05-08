@@ -6,6 +6,7 @@ import shutil
 import os
 import smtplib
 import json
+import multiprocessing
 from pathlib import Path
 from email.message import EmailMessage
 from typing import List, Dict, Any
@@ -72,11 +73,10 @@ def create_url(v: str) -> str:
     # Ex: https://cdn.kernel.org/pub/linux/kernel/v5.x/linux-5.11.15.tar.xz
     return URL_BASE + major_ver + ".x/linux-" + v + ".tar.xz"
 
-def do_build(v: str) -> bool:
+def do_build(v: str, n_jobs: int) -> bool:
     url: str = create_url(v)
     dirname: str = "linux-" + v
     filename: str = dirname + ".tar.xz"
-    n_jobs: int = 3
 
     print("Download the kernel source from kernel.org")
     try:
@@ -124,20 +124,25 @@ def notify(ver: str, mail_config: Dict[str, str]):
     s.login(mail_config["user"], mail_config["password"])
     s.send_message(msg)
 
+def retrieve_config(setting: Dict[str, Any], key: str, default):
+    if key in setting:
+        return setting[key]
+    else:
+        return default
+
 if __name__ == "__main__":
     with open("setting.json", "r") as f:
         setting: Dict[str, Any] = json.load(f)
 
-    lock_ver: str = ""
-    if "lock_ver" in setting:
-        lock_ver = setting["lock_ver"]
+    lock_ver: str = retrieve_config(setting, "lock_ver", "")
     latest_ver: str = find_latest_ver(lock_ver)
     built_ver: str = find_built_ver()
-    
+    n_jobs: int = retrieve_config(setting, "n_jobs", multiprocessing.cpu_count() - 1)
+
     if newer(latest_ver, built_ver) > 0:
         print("A new version available:", latest_ver)
 
-        ret: bool = do_build(latest_ver)
+        ret: bool = do_build(latest_ver, n_jobs)
         if ret:
             print("Build success!")
         else:
