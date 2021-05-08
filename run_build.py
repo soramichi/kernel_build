@@ -50,7 +50,7 @@ def find_built_ver() -> str:
         raise(ValueError("The version info cannot be extracted from the `config' file"))
 
 def find_latest_ver(lock_ver: str) -> str:
-    REPO_URL: string = "https://git.kernel.org/pub/scm/linux/kernel/git/stable/linux.git"
+    REPO_URL: str = "https://git.kernel.org/pub/scm/linux/kernel/git/stable/linux.git"
     git_ls_remote: List[str] = subprocess.check_output(["git", "ls-remote", "--tags", "--ref", REPO_URL], text=True, stderr=subprocess.DEVNULL).split('\n')[:-1]
     avail_vers: List[str] = []
 
