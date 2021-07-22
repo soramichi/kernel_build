@@ -76,8 +76,8 @@ def create_url(v: str) -> str:
 
 def do_build(v: str, n_jobs: int) -> bool:
     url: str = create_url(v)
-    dirname: str = "linux-" + v
-    filename: str = dirname + ".tar.xz"
+    kernel_dir: str = "linux-" + v
+    filename: str = kernel_dir + ".tar.xz"
 
     print("Download the kernel source from kernel.org")
     try:
@@ -90,26 +90,26 @@ def do_build(v: str, n_jobs: int) -> bool:
 
     print("Extracing the archive")
     try:
-        os.stat(dirname)
-        print(dirname, "already exists.")
+        os.stat(kernel_dir)
+        print(kernel_dir, "already exists.")
     except FileNotFoundError:
         subprocess.run(["tar", "xvf", filename], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
 
-    # cp config $dirname/.config
+    # cp config $kernel_dir/.config
     # yes "" | make oldconfig
-    shutil.copyfile("config", dirname + "/.config")
+    shutil.copyfile("config", kernel_dir + "/.config")
     yes: subprocess.Popen[str] = subprocess.Popen(["yes", ""], stdout=subprocess.PIPE, text=True)
-    subprocess.run(["make", "oldconfig"], stdin=yes.stdout, stdout=subprocess.DEVNULL, cwd=dirname, text=True)
+    subprocess.run(["make", "oldconfig"], stdin=yes.stdout, stdout=subprocess.DEVNULL, cwd=kernel_dir, text=True)
 
     print("Executing make...")
-    output: str = subprocess.check_output(["make", "bindeb-pkg", "-j", str(n_jobs)], stderr=subprocess.STDOUT, cwd=dirname, text=True)
+    output: str = subprocess.check_output(["make", "bindeb-pkg", "-j", str(n_jobs)], stderr=subprocess.STDOUT, cwd=kernel_dir, text=True)
     with open("run_build.log", "w") as f:
         f.write(output)
 
     if output.find("error:") == -1 and output.find("Error:") == -1:
-        shutil.copyfile(dirname + "/.config", "config")   # copy the latest config back
+        shutil.copyfile(kernel_dir + "/.config", "config")   # copy the latest config back
         force_delete(filename)
-        force_delete(dirname)
+        force_delete(kernel_dir)
         return True
     else:
         return False
