@@ -1,4 +1,5 @@
 import re
+import sys
 import subprocess
 import functools
 import urllib.request
@@ -131,7 +132,11 @@ def retrieve_config(setting: Dict[str, Any], key: str, default):
         return default
 
 if __name__ == "__main__":
-    with open("setting.json", "r") as f:
+    if len(sys.argv) < 2:
+        print("Usage: {} setting".format(sys.argv[0]))
+        sys.exit(1)
+
+    with open(sys.argv[1], "r") as f:
         setting: Dict[str, Any] = json.load(f)
 
     lock_ver: str = retrieve_config(setting, "lock_ver", "")
