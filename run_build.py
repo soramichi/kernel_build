@@ -40,8 +40,8 @@ def newer(v1: str, v2: str) -> int:
     else:
         return -1
 
-def find_built_ver() -> str:
-    with open("config", "r") as f:
+def find_built_ver(workspace: str) -> str:
+    with open(workspace + "/config", "r") as f:
         lines: List[str] = f.readlines()
 
         for l in lines:
@@ -74,10 +74,12 @@ def create_url(v: str) -> str:
     # Ex: https://cdn.kernel.org/pub/linux/kernel/v5.x/linux-5.11.15.tar.xz
     return URL_BASE + major_ver + ".x/linux-" + v + ".tar.xz"
 
-def do_build(v: str, n_jobs: int) -> bool:
+def do_build(v: str, n_jobs: int, workspace: str) -> bool:
     url: str = create_url(v)
     kernel_dir: str = "linux-" + v
     filename: str = kernel_dir + ".tar.xz"
+
+    os.chdir(workspace)
 
     print("Download the kernel source from kernel.org")
     try:
@@ -139,15 +141,16 @@ if __name__ == "__main__":
     with open(sys.argv[1], "r") as f:
         setting: Dict[str, Any] = json.load(f)
 
+    workspace: str = retrieve_config(setting, "workspace", "workspace")
     lock_ver: str = retrieve_config(setting, "lock_ver", "")
     latest_ver: str = find_latest_ver(lock_ver)
-    built_ver: str = find_built_ver()
+    built_ver: str = find_built_ver(workspace)
     n_jobs: int = retrieve_config(setting, "n_jobs", multiprocessing.cpu_count() - 1)
 
     if newer(latest_ver, built_ver) > 0:
         print("A new version available:", latest_ver)
 
-        ret: bool = do_build(latest_ver, n_jobs)
+        ret: bool = do_build(latest_ver, n_jobs, workspace)
         if ret:
             print("Build success!")
         else:
