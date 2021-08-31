@@ -104,11 +104,11 @@ def do_build(v: str, n_jobs: int, workspace: str) -> bool:
     subprocess.run(["make", "oldconfig"], stdin=yes.stdout, stdout=subprocess.DEVNULL, cwd=kernel_dir, text=True)
 
     print("Executing make...")
-    output: str = subprocess.check_output(["make", "bindeb-pkg", "-j", str(n_jobs)], stderr=subprocess.STDOUT, cwd=kernel_dir, text=True)
+    status: subprocess.CompletedProcess = subprocess.run(["make", "bindeb-pkg", "-j", str(n_jobs)], stdout=subprocess.PIPE, stderr=subprocess.STDOUT, cwd=kernel_dir, text=True)
     with open("run_build.log", "w") as f:
-        f.write(output)
+        f.write(status.stdout)
 
-    if output.find("error:") == -1 and output.find("Error:") == -1:
+    if status.returncode == 0:
         shutil.copyfile(kernel_dir + "/.config", "config")   # copy the latest config back
         force_delete(filename)
         force_delete(kernel_dir)
@@ -116,9 +116,9 @@ def do_build(v: str, n_jobs: int, workspace: str) -> bool:
     else:
         return False
 
-def notify(ver: str, mail_config: Dict[str, str]):
+def notify(ver: str, mail_config: Dict[str, str], status: bool):
     msg = EmailMessage()
-    msg['Subject'] = ('New kernel was successfully built: ' + ver)
+    msg['Subject'] = ('New kernel was successfully built: ' + ver) if status else ('Kernel build failed: ' + ver)
     msg['From'] = mail_config["from_addr"]
     msg['To'] = mail_config["to_addr"]
 
@@ -157,6 +157,6 @@ if __name__ == "__main__":
             print("An error occured while buidling. Please check out the log.")            
 
         if "mail_config" in setting:
-            notify(latest_ver, setting["mail_config"])
+            notify(latest_ver, setting["mail_config"], ret)
     else:
         print("No new version is available (built: {}, latest: {}).".format(built_ver, latest_ver))
